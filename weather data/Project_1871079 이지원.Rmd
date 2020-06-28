@@ -1,0 +1,104 @@
+---
+title: "Mathematical Statistics 1 Project"
+author: "1871079 JIwon Lee"
+date: '2020 6 10 '
+output: html_document
+---
+
+## R Markdown
+
+데이터 출처
+<https://data.kma.go.kr/cmmn/main.do>
+
+지점, 지역, 날짜, 평균기온, 최고기온, 최저기온, 강수량, 평균습도가 들어있는 데이터이다.
+그 중 평균기온에 대한 분석을 진행했다. 분석에 사용된 분포는 정규분포, 감마분포, 포아송분포, 음이항분포이다.
+평균기온을 x축으로 하는 히스토그램을 그린 뒤 fitdistrplus 라이브러리의 fitdist 함수를 이용해 각 parameter을 추정하였다. 그 후 추정한 parameter을 이용해 각 분포에 따른 선을 그려 분석해보았다. fitdist 함수가 적용되지 않은 분포인 경우 데이터변환을 통해 parameter 값을 추정해 진행하였다. 
+
+
+```{r}
+library(fitdistrplus)
+
+weather<-read.csv("weather.csv")
+names(weather)
+
+summary(weather)
+
+head(weather, 5)
+```
+
+### Normal distribution
+fitg의 값을 보면 알 수 있듯이 m값은 26.2, sd값은 3.03이다.
+
+```{r}
+hist(weather$Average, breaks=20)
+```
+```{r}
+hist(weather$Average, breaks=20, probability=T)
+fitg<-fitdist(weather$Average, "norm")
+summary(fitg)
+
+names(fitg)
+m<-fitg$estimate[1]
+sd<-fitg$estimate[2]
+
+x<-seq(10, 40, 0.01)
+lines(x, dnorm(x, m, sd), 'l')
+```
+
+### Gamma distribution
+fig2의 값을 보면 알 수 있듯이 shape의 값은 66.9, rate의 값은 2.55이다.
+```{r}
+hist(weather$Average, breaks=20, probability=T)
+
+fitg2<-fitdist(weather$Average, "gamma")
+summary(fitg2)
+
+names(fitg2)
+shape<-fitg2$estimate[1]
+rate<-fitg2$estimate[2]
+
+x<-seq(10, 40, 0.01)
+lines(x, dgamma(x, shape, rate), 'l')
+```
+
+### Poisson distribution
+포아송분포의 parameter인 람다의 경우 정규분포 표준편차의 제곱에 해당되므로 lambda의 값은 9.16이다.
+```{r}
+hist(weather$Average, breaks=20, probability=T)
+
+lambda<-sd^2
+x1<-c(0:40)
+
+lines(x1, dpois(x1, lambda), 'l')
+```
+
+### Negative binomial distribution
+음이항분포에서 size에 해당되는 값은 감마의 shape parameter라 했으므로 shape로 넣어주고 n(1-p)값이 람다이므로 계산을 통해 p값을 구해준다. p값은 0.863이다.
+```{r}
+hist(weather$Average, breaks=20, probability=T)
+
+n<-shape
+p<-1-lambda/n
+
+lines(x1, dnbinom(x1, size=n, prob=p), 'l')
+```
+
+### Chebyshev's Inequality
+
+
+```{r}
+n<-length(weather$Average)
+m0<-mean(weather$Average)
+sd0<-sd(weather$Average)
+k<-seq(0.5, 4, 0.5); l<-length(k)
+result<- data.frame(p1=rep(0, l), p2=rep(0, l))
+
+for(i in 1:l){
+  x1<-weather$Average[which(abs(weather$Average-m0)<=(k[i]*sd0))]
+  result$p1[i]<-length(x1)/n
+}
+
+result$p2<-1-1/k^2
+result
+```
+
